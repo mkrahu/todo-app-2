@@ -37,8 +37,11 @@ DEPENDENCIES
   pg
   pry
   puma
-  sinatra (~> 1.4.7)
+  sinatra
   sinatra-contrib
+
+RUBY VERSION
+   ruby 2.6.0p0
 
 BUNDLED WITH
    1.17.2

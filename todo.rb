@@ -89,6 +89,10 @@ before "/lists/:list_id/*" do
   @list = load_list(@list_id)
 end
 
+after do
+  @storage.disconnect
+end
+
 get '/' do
   redirect '/lists'
 end
