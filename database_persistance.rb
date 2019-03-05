@@ -20,14 +20,21 @@ class DatabasePersistance
   end
 
   def lists
-    sql = 'SELECT * FROM lists'
+    sql = <<~SQL
+      SELECT
+        l.id,
+        l.name,
+        COUNT(t.id) as todos_count,
+        COUNT(NULLIF(t.complete, true)) AS todos_remaining_count
+      FROM lists l
+        LEFT OUTER JOIN todos t ON l.id = t.list_id
+      GROUP BY l.id;
+    SQL
+
     result = query(sql)
 
     result.map do |tuple|
-      list_id = tuple['id']
-      todos = find_list_todos(list_id)
-
-      { id: list_id, name: tuple['name'], todos: todos }
+      tuple_to_list(tuple)
     end
   end
 
@@ -41,15 +48,23 @@ class DatabasePersistance
     query(sql, id)
   end
 
-  def find_list(id)
-    sql = 'SELECT * FROM lists WHERE id = $1'
-    result = query(sql, id)
+  def find_list(list_id)
+    sql =  sql = <<~SQL
+      SELECT
+        l.id,
+        l.name,
+        COUNT(t.id) as todos_count,
+        COUNT(NULLIF(t.complete, true)) AS todos_remaining_count
+      FROM lists l
+        LEFT OUTER JOIN todos t ON l.id = t.list_id
+      WHERE l.id = $1
+      GROUP BY l.id;
+    SQL
+    result = query(sql, list_id)
 
     tuple = result.first
-    list_id = tuple['id']
-    todos = find_list_todos(list_id)
 
-    { id: list_id, name: tuple['name'], todos: todos }
+    tuple_to_list(tuple)
   end
 
   def update_list_name(id, name)
@@ -77,8 +92,6 @@ class DatabasePersistance
     query(sql, list_id)
   end
 
-  private
-
   def find_list_todos(list_id)
     sql = 'SELECT * FROM todos WHERE list_id = $1'
     result = query(sql, list_id)
@@ -88,5 +101,14 @@ class DatabasePersistance
         name: tuple['name'],
         completed: tuple['complete'] == 't' }
     end
+  end
+
+  private
+
+  def tuple_to_list(tuple)
+    { id: tuple['id'],
+      name: tuple['name'],
+      todos_count: tuple['todos_count'].to_i,
+      todos_remaining_count: tuple['todos_remaining_count'].to_i }
   end
 end
